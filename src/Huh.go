@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
-	"github.com/i-am-the-slime/iris-go/aff"
+	"github.com/i-am-the-slime/iris-go/eventloop"
 )
 
 // Fields write their answers through pointers. Each field below keeps its
@@ -40,39 +40,31 @@ type NativeForm = *huh.Form
 
 var PageBreak = Entry{pageBreak: true}
 
-// validator turns a PureScript check ("" for fine) into huh's. A form that
-// runs on its own program checks on that program's goroutine, so it takes
-// the baton; a form inside a Bubble Tea program checks during Update, which
-// already holds it.
-func validator(standalone bool, check func(string) string) func(string) error {
+// validator turns a PureScript check ("" for fine) into huh's. The check is
+// pure, so it runs on whichever goroutine huh validates on.
+func validator(check func(string) string) func(string) error {
 	return func(value string) error {
-		var problem string
-		if standalone {
-			aff.Exclusive(func() { problem = check(value) })
-		} else {
-			problem = check(value)
-		}
-		if problem != "" {
+		if problem := check(value); problem != "" {
 			return errors.New(problem)
 		}
 		return nil
 	}
 }
 
-func InputImpl(standalone bool, title, description, placeholder string, charLimit int32, password bool, check func(string) string) StringField {
+func InputImpl(title, description, placeholder string, charLimit int32, password bool, check func(string) string) StringField {
 	value := new(string)
 	field := huh.NewInput().Title(title).Description(description).Placeholder(placeholder).
-		CharLimit(int(charLimit)).Value(value).Validate(validator(standalone, check))
+		CharLimit(int(charLimit)).Value(value).Validate(validator(check))
 	if password {
 		field = field.EchoMode(huh.EchoModePassword)
 	}
 	return StringField{entry: Entry{field: field}, value: value}
 }
 
-func TextImpl(standalone bool, title, description, placeholder string, lines, charLimit int32, check func(string) string) StringField {
+func TextImpl(title, description, placeholder string, lines, charLimit int32, check func(string) string) StringField {
 	value := new(string)
 	field := huh.NewText().Title(title).Description(description).Placeholder(placeholder).
-		Lines(int(lines)).CharLimit(int(charLimit)).Value(value).Validate(validator(standalone, check))
+		Lines(int(lines)).CharLimit(int(charLimit)).Value(value).Validate(validator(check))
 	return StringField{entry: Entry{field: field}, value: value}
 }
 
@@ -164,22 +156,20 @@ func FormImpl(entries []Entry, theme int32, showHelp bool) *huh.Form {
 	return huh.NewForm(groups...).WithTheme(themeOf(theme)).WithShowHelp(showHelp)
 }
 
-// RunImpl runs the form on a program of its own, off the baton, and reports
-// back on it.
+// RunImpl runs the form on a program of its own and reports back once it's
+// done.
 func RunImpl(form *huh.Form, completed func(), aborted func(), failed func(string)) {
-	retire := aff.Hold()
+	retire := eventloop.Hold()
 	go func() {
 		err := form.Run()
-		aff.Exclusive(func() {
-			switch {
-			case err == nil:
-				completed()
-			case errors.Is(err, huh.ErrUserAborted):
-				aborted()
-			default:
-				failed(err.Error())
-			}
-		})
+		switch {
+		case err == nil:
+			completed()
+		case errors.Is(err, huh.ErrUserAborted):
+			aborted()
+		default:
+			failed(err.Error())
+		}
 		retire()
 	}()
 }

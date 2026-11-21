@@ -50,26 +50,26 @@ import Effect.Exception (error, throw)
 
 -- | Fields that, filled in, give an `a`. Combine them with `ado` or `<*>`;
 -- | they appear in that order.
-newtype Form a = Form (Boolean -> Effect { entries :: Array Entry, answer :: Effect a })
+newtype Form a = Form (Effect { entries :: Array Entry, answer :: Effect a })
 
 instance Functor Form where
-  map f (Form build) = Form \standalone -> do
-    built <- build standalone
+  map f (Form build) = Form do
+    built <- build
     pure { entries: built.entries, answer: f <$> built.answer }
 
 instance Apply Form where
-  apply (Form buildF) (Form buildA) = Form \standalone -> do
-    left <- buildF standalone
-    right <- buildA standalone
+  apply (Form buildF) (Form buildA) = Form do
+    left <- buildF
+    right <- buildA
     pure { entries: left.entries <> right.entries, answer: left.answer <*> right.answer }
 
 instance Applicative Form where
-  pure a = Form \_ -> pure { entries: [], answer: pure a }
+  pure a = Form (pure { entries: [], answer: pure a })
 
 -- | Show these fields on a page of their own.
 page :: forall a. Form a -> Form a
-page (Form build) = Form \standalone -> do
-  built <- build standalone
+page (Form build) = Form do
+  built <- build
   pure built { entries = [ pageBreak ] <> built.entries <> [ pageBreak ] }
 
 foreign import pageBreak :: Entry
@@ -91,7 +91,7 @@ run = runWith identity
 
 runWith :: forall a. (Options -> Options) -> Form a -> Aff (Maybe a)
 runWith configure (Form build) = makeAff \done -> do
-  built <- build true
+  built <- build
   form <- buildForm configure built.entries
   runImpl form
     (built.answer >>= Just >>> Right >>> done)
@@ -118,7 +118,7 @@ useForm = useFormWith identity
 
 useFormWith :: forall a. (Options -> Options) -> Form a -> Hooks (FormHandle a)
 useFormWith configure (Form build) = do
-  built <- build false # liftEffect
+  built <- build # liftEffect
   form <- buildForm configure built.entries # liftEffect
   start <- initImpl form # liftEffect
   useCommand (Tea.fromNative start)
@@ -171,12 +171,12 @@ type InputOptions =
 
 -- | One line of text.
 input :: (InputOptions -> InputOptions) -> Form String
-input configure = Form \standalone -> do
+input configure = Form do
   let o = configure { title: "", description: "", placeholder: "", charLimit: 0, password: false, validate: const Nothing }
-  field <- inputImpl standalone o.title o.description o.placeholder o.charLimit o.password (problemOf o.validate)
+  field <- inputImpl o.title o.description o.placeholder o.charLimit o.password (problemOf o.validate)
   pure { entries: [ stringEntry field ], answer: readStringImpl field }
 
-foreign import inputImpl :: Boolean -> String -> String -> String -> Int -> Boolean -> (String -> String) -> Effect StringField
+foreign import inputImpl :: String -> String -> String -> Int -> Boolean -> (String -> String) -> Effect StringField
 foreign import stringEntry :: StringField -> Entry
 foreign import readStringImpl :: StringField -> Effect String
 
@@ -192,12 +192,12 @@ type TextOptions =
 
 -- | Several lines of text.
 text :: (TextOptions -> TextOptions) -> Form String
-text configure = Form \standalone -> do
+text configure = Form do
   let o = configure { title: "", description: "", placeholder: "", lines: 5, charLimit: 0, validate: const Nothing }
-  field <- textImpl standalone o.title o.description o.placeholder o.lines o.charLimit (problemOf o.validate)
+  field <- textImpl o.title o.description o.placeholder o.lines o.charLimit (problemOf o.validate)
   pure { entries: [ stringEntry field ], answer: readStringImpl field }
 
-foreign import textImpl :: Boolean -> String -> String -> String -> Int -> Int -> (String -> String) -> Effect StringField
+foreign import textImpl :: String -> String -> String -> Int -> Int -> (String -> String) -> Effect StringField
 
 type SelectOptions =
   { title :: String
@@ -208,7 +208,7 @@ type SelectOptions =
 
 -- | One of the options, each a label and the value you get. Give it at least one.
 select :: forall a. (SelectOptions -> SelectOptions) -> Array (String /\ a) -> Form a
-select configure choices = Form \_ -> do
+select configure choices = Form do
   let o = configure { title: "", description: "", height: 0 }
   field <- selectImpl o.title o.description (map fst choices) o.height
   pure { entries: [ choiceEntry field ], answer: readChoiceImpl field >>= chosen }
@@ -230,7 +230,7 @@ type MultiSelectOptions =
 
 -- | Any of the options.
 multiSelect :: forall a. (MultiSelectOptions -> MultiSelectOptions) -> Array (String /\ a) -> Form (Array a)
-multiSelect configure choices = Form \_ -> do
+multiSelect configure choices = Form do
   let o = configure { title: "", description: "", limit: 0 }
   field <- multiSelectImpl o.title o.description (map fst choices) o.limit
   pure { entries: [ choicesEntry field ], answer: catMaybes <<< map (map snd <<< index choices) <$> readChoicesImpl field }
@@ -249,7 +249,7 @@ type ConfirmOptions =
 
 -- | Yes or no.
 confirm :: (ConfirmOptions -> ConfirmOptions) -> Form Boolean
-confirm configure = Form \_ -> do
+confirm configure = Form do
   let o = configure { title: "", description: "", affirmative: "Yes", negative: "No", default: false }
   field <- confirmImpl o.title o.description o.affirmative o.negative o.default
   pure { entries: [ boolEntry field ], answer: readBoolImpl field }
@@ -260,7 +260,7 @@ foreign import readBoolImpl :: BoolField -> Effect Boolean
 
 -- | Something to read, no answer.
 note :: { title :: String, description :: String } -> Form Unit
-note { title, description } = Form \_ -> do
+note { title, description } = Form do
   entry <- noteImpl title description
   pure { entries: [ entry ], answer: pure unit }
 
