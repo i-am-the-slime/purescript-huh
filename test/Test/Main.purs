@@ -52,9 +52,18 @@ app = do
     status <- form.status
     view <- form.view
     pure $ Tea.view case status of
-      Done answer -> "Welcome " <> answer.name <> " on " <> show answer.plan <> " with " <> show answer.extras
+      Done answer -> "Welcome " <> answer.name
       Aborted -> "Maybe next time"
       Filling -> view
+
+detailed :: Component
+detailed = do
+  form <- Huh.useForm signup
+  render do
+    status <- form.status
+    pure $ Tea.view case status of
+      Done answer -> answer.name <> " on " <> show answer.plan <> " with " <> show answer.extras
+      _ -> "not yet"
 
 specs :: Spec Unit
 specs = describe "Huh" do
@@ -65,8 +74,12 @@ specs = describe "Huh" do
   it "gives typed answers once the form is done" do
     result <- Testing.runComponent
       [ Type "Ada", Press (key Enter), Press (key Down), Press (key Enter), Press (key Space), Press (key Enter) ]
-      app
-    result.frame `shouldSatisfy` contains (Pattern "Welcome Ada on Pro with [\"stickers\"]")
+      detailed
+    result.frame `shouldSatisfy` contains (Pattern "Ada on Pro with [\"stickers\"]")
+
+  it "welcomes you when you're done" do
+    result <- Testing.runComponent [ Type "Ada", Press (key Enter), Press (key Enter), Press (key Enter) ] app
+    result.frame `shouldSatisfy` contains (Pattern "Welcome Ada")
 
   it "doesn't let an invalid answer through" do
     result <- Testing.runComponent [ Type "A", Press (key Enter) ] app
