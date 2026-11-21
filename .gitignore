@@ -1,0 +1,6 @@
+.spago/
+output/
+.test-out/
+examples/out/
+examples/.test-out/
+examples/.spago/
