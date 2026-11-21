@@ -1,0 +1,22 @@
+package:
+  name: huh-examples
+  dependencies:
+    - aff
+    - bubbletea
+    - console
+    - effect
+    - huh
+    - maybe
+    - prelude
+    - strings
+    - tuples
+workspace:
+  packageSet:
+    registry: 73.2.0
+  extraPackages:
+    huh:
+      path: ..
+    bubbletea:
+      path: ../../purescript-bubbletea
+    lipgloss:
+      path: ../../purescript-lipgloss

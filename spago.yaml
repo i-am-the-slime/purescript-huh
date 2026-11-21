@@ -1,18 +1,26 @@
 package:
   name: huh
+  description: Huh forms for the terminal, for PureScript compiled to Go with Iris
   dependencies:
-    - prelude
-    - effect
     - aff
+    - arrays
+    - bubbletea
+    - effect
     - either
     - exceptions
-    - functions
-  build:
-    strict: true
-    pedantic_packages: true
-
+    - maybe
+    - prelude
+    - tuples
+  test:
+    main: Test.Main
+    dependencies:
+      - spec
+      - strings
 workspace:
-  package_set:
-    registry: 49.0.0
-  backend:
-    cmd: echo "uses psgo backend"
+  packageSet:
+    registry: 73.2.0
+  extraPackages:
+    bubbletea:
+      path: ../purescript-bubbletea
+    lipgloss:
+      path: ../purescript-lipgloss
