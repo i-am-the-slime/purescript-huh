@@ -72,6 +72,8 @@ page (Form build) = Form \standalone -> do
   built <- build standalone
   pure built { entries = [ pageBreak ] <> built.entries <> [ pageBreak ] }
 
+foreign import pageBreak :: Entry
+
 --------------------------------------------------------------------------------
 -- Running
 --------------------------------------------------------------------------------
@@ -96,6 +98,8 @@ runWith configure (Form build) = makeAff \done -> do
     (done (Right Nothing))
     (error >>> Left >>> done)
   pure nonCanceler
+
+foreign import runImpl :: NativeForm -> Effect Unit -> Effect Unit -> (String -> Effect Unit) -> Effect Unit
 
 -- | Where a form inside a component has got to.
 data Status a = Filling | Done a | Aborted
@@ -131,6 +135,11 @@ useFormWith configure (Form build) = do
     2 -> pure Aborted
     _ -> pure Filling
 
+foreign import initImpl :: NativeForm -> Effect Tea.NativeCmd
+foreign import updateImpl :: NativeForm -> Tea.NativeMsg -> Effect Tea.NativeCmd
+foreign import viewImpl :: NativeForm -> Effect String
+foreign import stateImpl :: NativeForm -> Effect Int
+
 buildForm :: (Options -> Options) -> Array Entry -> Effect NativeForm
 buildForm configure entries = do
   let options = configure defaults
@@ -142,6 +151,8 @@ buildForm configure entries = do
     Base16 -> 2
     Catppuccin -> 3
     Base -> 4
+
+foreign import formImpl :: Array Entry -> Int -> Boolean -> Effect NativeForm
 
 --------------------------------------------------------------------------------
 -- Fields
@@ -165,6 +176,10 @@ input configure = Form \standalone -> do
   field <- inputImpl standalone o.title o.description o.placeholder o.charLimit o.password (problemOf o.validate)
   pure { entries: [ stringEntry field ], answer: readStringImpl field }
 
+foreign import inputImpl :: Boolean -> String -> String -> String -> Int -> Boolean -> (String -> String) -> Effect StringField
+foreign import stringEntry :: StringField -> Entry
+foreign import readStringImpl :: StringField -> Effect String
+
 type TextOptions =
   { title :: String
   , description :: String
@@ -181,6 +196,8 @@ text configure = Form \standalone -> do
   let o = configure { title: "", description: "", placeholder: "", lines: 5, charLimit: 0, validate: const Nothing }
   field <- textImpl standalone o.title o.description o.placeholder o.lines o.charLimit (problemOf o.validate)
   pure { entries: [ stringEntry field ], answer: readStringImpl field }
+
+foreign import textImpl :: Boolean -> String -> String -> String -> Int -> Int -> (String -> String) -> Effect StringField
 
 type SelectOptions =
   { title :: String
@@ -200,6 +217,10 @@ select configure choices = Form \_ -> do
     Just choice -> pure (snd choice)
     Nothing -> throw "Huh.select needs at least one option"
 
+foreign import selectImpl :: String -> String -> Array String -> Int -> Effect ChoiceField
+foreign import choiceEntry :: ChoiceField -> Entry
+foreign import readChoiceImpl :: ChoiceField -> Effect Int
+
 type MultiSelectOptions =
   { title :: String
   , description :: String
@@ -213,6 +234,10 @@ multiSelect configure choices = Form \_ -> do
   let o = configure { title: "", description: "", limit: 0 }
   field <- multiSelectImpl o.title o.description (map fst choices) o.limit
   pure { entries: [ choicesEntry field ], answer: catMaybes <<< map (map snd <<< index choices) <$> readChoicesImpl field }
+
+foreign import multiSelectImpl :: String -> String -> Array String -> Int -> Effect ChoicesField
+foreign import choicesEntry :: ChoicesField -> Entry
+foreign import readChoicesImpl :: ChoicesField -> Effect (Array Int)
 
 type ConfirmOptions =
   { title :: String
@@ -229,11 +254,17 @@ confirm configure = Form \_ -> do
   field <- confirmImpl o.title o.description o.affirmative o.negative o.default
   pure { entries: [ boolEntry field ], answer: readBoolImpl field }
 
+foreign import confirmImpl :: String -> String -> String -> String -> Boolean -> Effect BoolField
+foreign import boolEntry :: BoolField -> Entry
+foreign import readBoolImpl :: BoolField -> Effect Boolean
+
 -- | Something to read, no answer.
 note :: { title :: String, description :: String } -> Form Unit
 note { title, description } = Form \_ -> do
   entry <- noteImpl title description
   pure { entries: [ entry ], answer: pure unit }
+
+foreign import noteImpl :: String -> String -> Effect Entry
 
 problemOf :: (String -> Maybe String) -> String -> String
 problemOf validate answer = fromMaybe "" (validate answer)
@@ -248,25 +279,3 @@ foreign import data ChoiceField :: Type
 foreign import data ChoicesField :: Type
 foreign import data BoolField :: Type
 foreign import data NativeForm :: Type
-
-foreign import pageBreak :: Entry
-foreign import inputImpl :: Boolean -> String -> String -> String -> Int -> Boolean -> (String -> String) -> Effect StringField
-foreign import textImpl :: Boolean -> String -> String -> String -> Int -> Int -> (String -> String) -> Effect StringField
-foreign import selectImpl :: String -> String -> Array String -> Int -> Effect ChoiceField
-foreign import multiSelectImpl :: String -> String -> Array String -> Int -> Effect ChoicesField
-foreign import confirmImpl :: String -> String -> String -> String -> Boolean -> Effect BoolField
-foreign import noteImpl :: String -> String -> Effect Entry
-foreign import stringEntry :: StringField -> Entry
-foreign import choiceEntry :: ChoiceField -> Entry
-foreign import choicesEntry :: ChoicesField -> Entry
-foreign import boolEntry :: BoolField -> Entry
-foreign import readStringImpl :: StringField -> Effect String
-foreign import readChoiceImpl :: ChoiceField -> Effect Int
-foreign import readChoicesImpl :: ChoicesField -> Effect (Array Int)
-foreign import readBoolImpl :: BoolField -> Effect Boolean
-foreign import formImpl :: Array Entry -> Int -> Boolean -> Effect NativeForm
-foreign import runImpl :: NativeForm -> Effect Unit -> Effect Unit -> (String -> Effect Unit) -> Effect Unit
-foreign import initImpl :: NativeForm -> Effect Tea.NativeCmd
-foreign import updateImpl :: NativeForm -> Tea.NativeMsg -> Effect Tea.NativeCmd
-foreign import viewImpl :: NativeForm -> Effect String
-foreign import stateImpl :: NativeForm -> Effect Int
