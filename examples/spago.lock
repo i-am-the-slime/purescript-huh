@@ -617,7 +617,7 @@
         "path": "../../purescript-bubbletea-ws-io"
       },
       "go-io": {
-        "path": "../../purescript-go-ws/packages/go-io"
+        "path": "../../purescript-go-ws-readable/packages/go-io"
       },
       "huh": {
         "path": ".."
@@ -898,7 +898,7 @@
     },
     "go-io": {
       "type": "local",
-      "path": "../../purescript-go-ws/packages/go-io",
+      "path": "../../purescript-go-ws-readable/packages/go-io",
       "dependencies": [
         "aff",
         "arrays",

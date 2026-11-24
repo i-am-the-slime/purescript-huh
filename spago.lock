@@ -621,7 +621,7 @@
         "path": "../purescript-bubbletea-ws-io"
       },
       "go-io": {
-        "path": "../purescript-go-ws/packages/go-io"
+        "path": "../purescript-go-ws-readable/packages/go-io"
       },
       "lipgloss": {
         "path": "../purescript-lipgloss"
@@ -968,7 +968,7 @@
     },
     "go-io": {
       "type": "local",
-      "path": "../purescript-go-ws/packages/go-io",
+      "path": "../purescript-go-ws-readable/packages/go-io",
       "dependencies": [
         "aff",
         "arrays",

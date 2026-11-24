@@ -25,4 +25,4 @@ workspace:
     lipgloss:
       path: ../purescript-lipgloss
     go-io:
-      path: ../purescript-go-ws/packages/go-io
+      path: ../purescript-go-ws-readable/packages/go-io
