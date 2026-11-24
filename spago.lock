@@ -5,12 +5,11 @@
         "path": "./",
         "core": {
           "dependencies": [
-            "aff",
             "arrays",
             "bubbletea",
             "effect",
-            "either",
             "exceptions",
+            "go-io",
             "maybe",
             "prelude",
             "tuples"
@@ -18,6 +17,7 @@
         },
         "test": {
           "dependencies": [
+            "aff",
             "spec",
             "strings"
           ]
@@ -618,7 +618,10 @@
     },
     "extra_packages": {
       "bubbletea": {
-        "path": "../purescript-bubbletea"
+        "path": "../purescript-bubbletea-ws-io"
+      },
+      "go-io": {
+        "path": "../purescript-go-ws/packages/go-io"
       },
       "lipgloss": {
         "path": "../purescript-lipgloss"
@@ -706,22 +709,20 @@
     },
     "bubbletea": {
       "type": "local",
-      "path": "../purescript-bubbletea",
+      "path": "../purescript-bubbletea-ws-io",
       "dependencies": [
-        "aff",
         "arrays",
-        "avar",
         "datetime",
         "effect",
         "either",
         "exceptions",
         "foldable-traversable",
+        "go-io",
         "integers",
         "lipgloss",
         "maybe",
         "newtype",
         "prelude",
-        "refs",
         "strings",
         "transformers",
         "tuples"
@@ -739,6 +740,15 @@
         "prelude",
         "tuples",
         "unfoldable"
+      ]
+    },
+    "console": {
+      "type": "registry",
+      "version": "6.1.0",
+      "integrity": "sha256-3T5PPz1mATZmV0C4GzkCkpLlCa5xG7u8ZNgnLrrrI1Q=",
+      "dependencies": [
+        "effect",
+        "prelude"
       ]
     },
     "const": {
@@ -954,6 +964,28 @@
         "tailrec",
         "tuples",
         "unfoldable"
+      ]
+    },
+    "go-io": {
+      "type": "local",
+      "path": "../purescript-go-ws/packages/go-io",
+      "dependencies": [
+        "aff",
+        "arrays",
+        "console",
+        "control",
+        "datetime",
+        "effect",
+        "either",
+        "exceptions",
+        "foldable-traversable",
+        "maybe",
+        "newtype",
+        "parallel",
+        "prelude",
+        "tailrec",
+        "transformers",
+        "tuples"
       ]
     },
     "identity": {

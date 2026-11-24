@@ -5,7 +5,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
-	"github.com/i-am-the-slime/iris-go/eventloop"
 )
 
 // Fields write their answers through pointers. Each field below keeps its
@@ -156,22 +155,16 @@ func FormImpl(entries []Entry, theme int32, showHelp bool) *huh.Form {
 	return huh.NewForm(groups...).WithTheme(themeOf(theme)).WithShowHelp(showHelp)
 }
 
-// RunImpl runs the form on a program of its own and reports back once it's
-// done.
-func RunImpl(form *huh.Form, completed func(), aborted func(), failed func(string)) {
-	retire := eventloop.Hold()
-	go func() {
-		err := form.Run()
-		switch {
-		case err == nil:
-			completed()
-		case errors.Is(err, huh.ErrUserAborted):
-			aborted()
-		default:
-			failed(err.Error())
-		}
-		retire()
-	}()
+// RunImpl runs the form on a program of its own and waits until it's done.
+func RunImpl[R any](completed R, aborted R, failed func(string) R, form *huh.Form) R {
+	err := form.Run()
+	switch {
+	case err == nil:
+		return completed
+	case errors.Is(err, huh.ErrUserAborted):
+		return aborted
+	}
+	return failed(err.Error())
 }
 
 func InitImpl(form *huh.Form) tea.Cmd { return form.Init() }

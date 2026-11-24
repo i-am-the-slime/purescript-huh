@@ -37,20 +37,19 @@ module Huh
 import Prelude
 
 import Bubbletea as Tea
-import Bubbletea.Hooks (Action, Hooks, command, useCommand, useEvent)
+import Bubbletea.Hooks (Action, Hooks, command, liftIO, useCommand, useEvent)
 import Data.Array (catMaybes, index)
-import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (fst, snd)
 import Data.Tuple.Nested (type (/\))
 import Effect (Effect)
-import Effect.Aff (Aff, makeAff, nonCanceler)
-import Effect.Class (liftEffect)
-import Effect.Exception (error, throw)
+import Effect.Exception (error)
+import Go.IO (throwIO)
+import Go.IO.Internal (IO(..))
 
 -- | Fields that, filled in, give an `a`. Combine them with `ado` or `<*>`;
 -- | they appear in that order.
-newtype Form a = Form (Effect { entries :: Array Entry, answer :: Effect a })
+newtype Form a = Form (IO { entries :: Array Entry, answer :: IO a })
 
 instance Functor Form where
   map f (Form build) = Form do
@@ -85,21 +84,25 @@ type Options = { theme :: Theme, showHelp :: Boolean }
 defaults :: Options
 defaults = { theme: Charm, showHelp: true }
 
--- | Ask in the terminal. `Nothing` if the user gave up with ctrl+c.
-run :: forall a. Form a -> Aff (Maybe a)
+-- | Ask in the terminal, and wait for the answer. `Nothing` if the user gave
+-- | up with ctrl+c.
+-- |
+-- |     main = launchIO_ (Huh.run order >>= …)
+run :: forall a. Form a -> IO (Maybe a)
 run = runWith identity
 
-runWith :: forall a. (Options -> Options) -> Form a -> Aff (Maybe a)
-runWith configure (Form build) = makeAff \done -> do
+runWith :: forall a. (Options -> Options) -> Form a -> IO (Maybe a)
+runWith configure (Form build) = do
   built <- build
   form <- buildForm configure built.entries
-  runImpl form
-    (built.answer >>= Just >>> Right >>> done)
-    (done (Right Nothing))
-    (error >>> Left >>> done)
-  pure nonCanceler
+  IO (runImpl Completed GaveUp Failed form) >>= case _ of
+    Completed -> built.answer <#> Just
+    GaveUp -> pure Nothing
+    Failed reason -> throwIO (error reason)
 
-foreign import runImpl :: NativeForm -> Effect Unit -> Effect Unit -> (String -> Effect Unit) -> Effect Unit
+data Outcome = Completed | GaveUp | Failed String
+
+foreign import runImpl :: forall r. r -> r -> (String -> r) -> NativeForm -> Effect r
 
 -- | Where a form inside a component has got to.
 data Status a = Filling | Done a | Aborted
@@ -118,19 +121,19 @@ useForm = useFormWith identity
 
 useFormWith :: forall a. (Options -> Options) -> Form a -> Hooks (FormHandle a)
 useFormWith configure (Form build) = do
-  built <- build # liftEffect
-  form <- buildForm configure built.entries # liftEffect
-  start <- initImpl form # liftEffect
+  built <- build # liftIO
+  form <- buildForm configure built.entries # liftIO
+  start <- IO (initImpl form) # liftIO
   useCommand (Tea.fromNative start)
   useEvent \event -> do
-    cmd <- updateImpl form (Tea.toNative event) # liftEffect
+    cmd <- IO (updateImpl form (Tea.toNative event)) # liftIO
     command (Tea.fromNative cmd)
   pure
-    { view: viewImpl form # liftEffect
-    , status: statusOf form built.answer # liftEffect
+    { view: IO (viewImpl form) # liftIO
+    , status: statusOf form built.answer # liftIO
     }
   where
-  statusOf form answer = stateImpl form >>= case _ of
+  statusOf form answer = IO (stateImpl form) >>= case _ of
     1 -> Done <$> answer
     2 -> pure Aborted
     _ -> pure Filling
@@ -140,10 +143,10 @@ foreign import updateImpl :: NativeForm -> Tea.NativeMsg -> Effect Tea.NativeCmd
 foreign import viewImpl :: NativeForm -> Effect String
 foreign import stateImpl :: NativeForm -> Effect Int
 
-buildForm :: (Options -> Options) -> Array Entry -> Effect NativeForm
+buildForm :: (Options -> Options) -> Array Entry -> IO NativeForm
 buildForm configure entries = do
   let options = configure defaults
-  formImpl entries (themeCode options.theme) options.showHelp
+  IO (formImpl entries (themeCode options.theme) options.showHelp)
   where
   themeCode = case _ of
     Charm -> 0
@@ -173,8 +176,8 @@ type InputOptions =
 input :: (InputOptions -> InputOptions) -> Form String
 input configure = Form do
   let o = configure { title: "", description: "", placeholder: "", charLimit: 0, password: false, validate: const Nothing }
-  field <- inputImpl o.title o.description o.placeholder o.charLimit o.password (problemOf o.validate)
-  pure { entries: [ stringEntry field ], answer: readStringImpl field }
+  field <- IO (inputImpl o.title o.description o.placeholder o.charLimit o.password (problemOf o.validate))
+  pure { entries: [ stringEntry field ], answer: IO (readStringImpl field) }
 
 foreign import inputImpl :: String -> String -> String -> Int -> Boolean -> (String -> String) -> Effect StringField
 foreign import stringEntry :: StringField -> Entry
@@ -194,8 +197,8 @@ type TextOptions =
 text :: (TextOptions -> TextOptions) -> Form String
 text configure = Form do
   let o = configure { title: "", description: "", placeholder: "", lines: 5, charLimit: 0, validate: const Nothing }
-  field <- textImpl o.title o.description o.placeholder o.lines o.charLimit (problemOf o.validate)
-  pure { entries: [ stringEntry field ], answer: readStringImpl field }
+  field <- IO (textImpl o.title o.description o.placeholder o.lines o.charLimit (problemOf o.validate))
+  pure { entries: [ stringEntry field ], answer: IO (readStringImpl field) }
 
 foreign import textImpl :: String -> String -> String -> Int -> Int -> (String -> String) -> Effect StringField
 
@@ -210,12 +213,12 @@ type SelectOptions =
 select :: forall a. (SelectOptions -> SelectOptions) -> Array (String /\ a) -> Form a
 select configure choices = Form do
   let o = configure { title: "", description: "", height: 0 }
-  field <- selectImpl o.title o.description (map fst choices) o.height
-  pure { entries: [ choiceEntry field ], answer: readChoiceImpl field >>= chosen }
+  field <- IO (selectImpl o.title o.description (map fst choices) o.height)
+  pure { entries: [ choiceEntry field ], answer: IO (readChoiceImpl field) >>= chosen }
   where
   chosen i = case index choices i of
     Just choice -> pure (snd choice)
-    Nothing -> throw "Huh.select needs at least one option"
+    Nothing -> throwIO (error "Huh.select needs at least one option")
 
 foreign import selectImpl :: String -> String -> Array String -> Int -> Effect ChoiceField
 foreign import choiceEntry :: ChoiceField -> Entry
@@ -232,8 +235,8 @@ type MultiSelectOptions =
 multiSelect :: forall a. (MultiSelectOptions -> MultiSelectOptions) -> Array (String /\ a) -> Form (Array a)
 multiSelect configure choices = Form do
   let o = configure { title: "", description: "", limit: 0 }
-  field <- multiSelectImpl o.title o.description (map fst choices) o.limit
-  pure { entries: [ choicesEntry field ], answer: catMaybes <<< map (map snd <<< index choices) <$> readChoicesImpl field }
+  field <- IO (multiSelectImpl o.title o.description (map fst choices) o.limit)
+  pure { entries: [ choicesEntry field ], answer: IO (readChoicesImpl field) <#> map (index choices >>> map snd) >>> catMaybes }
 
 foreign import multiSelectImpl :: String -> String -> Array String -> Int -> Effect ChoicesField
 foreign import choicesEntry :: ChoicesField -> Entry
@@ -251,8 +254,8 @@ type ConfirmOptions =
 confirm :: (ConfirmOptions -> ConfirmOptions) -> Form Boolean
 confirm configure = Form do
   let o = configure { title: "", description: "", affirmative: "Yes", negative: "No", default: false }
-  field <- confirmImpl o.title o.description o.affirmative o.negative o.default
-  pure { entries: [ boolEntry field ], answer: readBoolImpl field }
+  field <- IO (confirmImpl o.title o.description o.affirmative o.negative o.default)
+  pure { entries: [ boolEntry field ], answer: IO (readBoolImpl field) }
 
 foreign import confirmImpl :: String -> String -> String -> String -> Boolean -> Effect BoolField
 foreign import boolEntry :: BoolField -> Entry
@@ -261,7 +264,7 @@ foreign import readBoolImpl :: BoolField -> Effect Boolean
 -- | Something to read, no answer.
 note :: { title :: String, description :: String } -> Form Unit
 note { title, description } = Form do
-  entry <- noteImpl title description
+  entry <- IO (noteImpl title description)
   pure { entries: [ entry ], answer: pure unit }
 
 foreign import noteImpl :: String -> String -> Effect Entry

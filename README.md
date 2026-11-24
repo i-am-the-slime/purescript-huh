@@ -20,7 +20,7 @@ order = ado
   in { burger, toppings, name, discount }
 
 main :: Effect Unit
-main = launchAff_ do
+main = launchIO_ do
   answer <- Huh.run order
   case answer of
     Nothing -> log "No burger today."
@@ -37,7 +37,9 @@ main = launchAff_ do
 One Chickwich with lettuce, tomatoes for Ada, 15% off.
 ```
 
-`run` gives you `Nothing` if the user gives up with ctrl+c. `Huh.page` puts fields on a page of their
+`run` is a [go-io](https://github.com/i-am-the-slime/purescript-go/tree/main/packages/go-io) `IO`
+action that waits for the answer, and `log` is `Go.IO.Console`'s. It gives you `Nothing` if the user
+gives up with ctrl+c. `Huh.page` puts fields on a page of their
 own; without it, fields share a page.
 
 ## Fields
@@ -63,8 +65,8 @@ Pick a look with `Huh.runWith _ { theme = Huh.Dracula } order` (`Charm`, `Dracul
 watch its `status`:
 
 ```purescript
-app :: Component
-app = do
+app :: Component Unit Void
+app = component \_ -> do
   form <- Huh.useForm signup
   render do
     status <- form.status

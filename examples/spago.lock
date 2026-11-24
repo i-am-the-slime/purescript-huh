@@ -5,10 +5,9 @@
         "path": "./",
         "core": {
           "dependencies": [
-            "aff",
             "bubbletea",
-            "console",
             "effect",
+            "go-io",
             "huh",
             "maybe",
             "prelude",
@@ -615,7 +614,10 @@
     },
     "extra_packages": {
       "bubbletea": {
-        "path": "../../purescript-bubbletea"
+        "path": "../../purescript-bubbletea-ws-io"
+      },
+      "go-io": {
+        "path": "../../purescript-go-ws/packages/go-io"
       },
       "huh": {
         "path": ".."
@@ -668,20 +670,6 @@
         "unsafe-coerce"
       ]
     },
-    "avar": {
-      "type": "registry",
-      "version": "5.0.1",
-      "integrity": "sha256-8V4SxF4TIWZ9Ik1P4lPzIRUAZeFBe8w5WA2VcCEKsIk=",
-      "dependencies": [
-        "aff",
-        "effect",
-        "either",
-        "exceptions",
-        "functions",
-        "maybe",
-        "prelude"
-      ]
-    },
     "bifunctors": {
       "type": "registry",
       "version": "6.1.0",
@@ -696,22 +684,20 @@
     },
     "bubbletea": {
       "type": "local",
-      "path": "../../purescript-bubbletea",
+      "path": "../../purescript-bubbletea-ws-io",
       "dependencies": [
-        "aff",
         "arrays",
-        "avar",
         "datetime",
         "effect",
         "either",
         "exceptions",
         "foldable-traversable",
+        "go-io",
         "integers",
         "lipgloss",
         "maybe",
         "newtype",
         "prelude",
-        "refs",
         "strings",
         "transformers",
         "tuples"
@@ -910,16 +896,37 @@
         "unfoldable"
       ]
     },
+    "go-io": {
+      "type": "local",
+      "path": "../../purescript-go-ws/packages/go-io",
+      "dependencies": [
+        "aff",
+        "arrays",
+        "console",
+        "control",
+        "datetime",
+        "effect",
+        "either",
+        "exceptions",
+        "foldable-traversable",
+        "maybe",
+        "newtype",
+        "parallel",
+        "prelude",
+        "tailrec",
+        "transformers",
+        "tuples"
+      ]
+    },
     "huh": {
       "type": "local",
       "path": "..",
       "dependencies": [
-        "aff",
         "arrays",
         "bubbletea",
         "effect",
-        "either",
         "exceptions",
+        "go-io",
         "maybe",
         "prelude",
         "tuples"

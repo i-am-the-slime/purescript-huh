@@ -1,10 +1,9 @@
 package:
   name: huh-examples
   dependencies:
-    - aff
     - bubbletea
-    - console
     - effect
+    - go-io
     - huh
     - maybe
     - prelude
@@ -17,6 +16,8 @@ workspace:
     huh:
       path: ..
     bubbletea:
-      path: ../../purescript-bubbletea
+      path: ../../purescript-bubbletea-ws-io
     lipgloss:
       path: ../../purescript-lipgloss
+    go-io:
+      path: ../../purescript-go-ws/packages/go-io

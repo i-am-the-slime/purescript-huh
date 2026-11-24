@@ -6,8 +6,8 @@ import Data.Maybe (Maybe(..))
 import Data.String (joinWith, null)
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
-import Effect.Aff (launchAff_)
-import Effect.Class.Console (log)
+import Go.IO (launchIO_)
+import Go.IO.Console (log)
 import Huh (Form)
 import Huh as Huh
 
@@ -32,7 +32,7 @@ order = ado
   in { burger, toppings, name, discount }
 
 main :: Effect Unit
-main = launchAff_ do
+main = launchIO_ do
   answer <- Huh.run order
   case answer of
     Nothing -> log "No burger today."

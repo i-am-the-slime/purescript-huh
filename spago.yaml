@@ -2,18 +2,18 @@ package:
   name: huh
   description: Huh forms for the terminal, for PureScript compiled to Go with Iris
   dependencies:
-    - aff
     - arrays
     - bubbletea
     - effect
-    - either
     - exceptions
+    - go-io
     - maybe
     - prelude
     - tuples
   test:
     main: Test.Main
     dependencies:
+      - aff
       - spec
       - strings
 workspace:
@@ -21,6 +21,8 @@ workspace:
     registry: 73.2.0
   extraPackages:
     bubbletea:
-      path: ../purescript-bubbletea
+      path: ../purescript-bubbletea-ws-io
     lipgloss:
       path: ../purescript-lipgloss
+    go-io:
+      path: ../purescript-go-ws/packages/go-io
