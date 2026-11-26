@@ -4,3 +4,4 @@ output/
 examples/out/
 examples/.test-out/
 examples/.spago/
+spago.lock
