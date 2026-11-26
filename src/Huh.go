@@ -2,6 +2,7 @@ package ffi
 
 import (
 	"errors"
+	"slices"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
@@ -50,20 +51,20 @@ func validator(check func(string) string) func(string) error {
 	}
 }
 
-func InputImpl(title, description, placeholder string, charLimit int32, password bool, check func(string) string) StringField {
+func InputImpl(title, description, placeholder string, charLimit int, password bool, check func(string) string) StringField {
 	value := new(string)
 	field := huh.NewInput().Title(title).Description(description).Placeholder(placeholder).
-		CharLimit(int(charLimit)).Value(value).Validate(validator(check))
+		CharLimit(charLimit).Value(value).Validate(validator(check))
 	if password {
 		field = field.EchoMode(huh.EchoModePassword)
 	}
 	return StringField{entry: Entry{field: field}, value: value}
 }
 
-func TextImpl(title, description, placeholder string, lines, charLimit int32, check func(string) string) StringField {
+func TextImpl(title, description, placeholder string, lines, charLimit int, check func(string) string) StringField {
 	value := new(string)
 	field := huh.NewText().Title(title).Description(description).Placeholder(placeholder).
-		Lines(int(lines)).CharLimit(int(charLimit)).Value(value).Validate(validator(check))
+		Lines(lines).CharLimit(charLimit).Value(value).Validate(validator(check))
 	return StringField{entry: Entry{field: field}, value: value}
 }
 
@@ -75,20 +76,20 @@ func options(labels []string) []huh.Option[int] {
 	return choices
 }
 
-func SelectImpl(title, description string, labels []string, height int32) ChoiceField {
+func SelectImpl(title, description string, labels []string, height int) ChoiceField {
 	value := new(int)
 	field := huh.NewSelect[int]().Title(title).Description(description).Options(options(labels)...).Value(value)
 	if height > 0 {
-		field = field.Height(int(height))
+		field = field.Height(height)
 	}
 	return ChoiceField{entry: Entry{field: field}, value: value}
 }
 
-func MultiSelectImpl(title, description string, labels []string, limit int32) ChoicesField {
+func MultiSelectImpl(title, description string, labels []string, limit int) ChoicesField {
 	value := new([]int)
 	field := huh.NewMultiSelect[int]().Title(title).Description(description).Options(options(labels)...).Value(value)
 	if limit > 0 {
-		field = field.Limit(int(limit))
+		field = field.Limit(limit)
 	}
 	return ChoicesField{entry: Entry{field: field}, value: value}
 }
@@ -110,18 +111,12 @@ func ChoicesEntry(f ChoicesField) Entry { return f.entry }
 func BoolEntry(f BoolField) Entry       { return f.entry }
 
 func ReadStringImpl(f StringField) string { return *f.value }
-func ReadChoiceImpl(f ChoiceField) int32  { return int32(*f.value) }
+func ReadChoiceImpl(f ChoiceField) int    { return *f.value }
 func ReadBoolImpl(f BoolField) bool       { return *f.value }
 
-func ReadChoicesImpl(f ChoicesField) []int32 {
-	chosen := make([]int32, len(*f.value))
-	for i, index := range *f.value {
-		chosen[i] = int32(index)
-	}
-	return chosen
-}
+func ReadChoicesImpl(f ChoicesField) []int { return slices.Clone(*f.value) }
 
-func themeOf(theme int32) huh.Theme {
+func themeOf(theme int) huh.Theme {
 	switch theme {
 	case 1:
 		return huh.ThemeFunc(huh.ThemeDracula)
@@ -135,7 +130,7 @@ func themeOf(theme int32) huh.Theme {
 	return huh.ThemeFunc(huh.ThemeCharm)
 }
 
-func FormImpl(entries []Entry, theme int32, showHelp bool) *huh.Form {
+func FormImpl(entries []Entry, theme int, showHelp bool) *huh.Form {
 	groups := []*huh.Group{}
 	fields := []huh.Field{}
 	flush := func() {
@@ -180,7 +175,7 @@ func UpdateImpl(form *huh.Form, msg tea.Msg) tea.Cmd {
 func ViewImpl(form *huh.Form) string { return form.View() }
 
 // StateImpl: 0 filling in, 1 completed, 2 aborted.
-func StateImpl(form *huh.Form) int32 {
+func StateImpl(form *huh.Form) int {
 	switch form.State {
 	case huh.StateCompleted:
 		return 1

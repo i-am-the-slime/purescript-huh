@@ -18,11 +18,11 @@ package:
       - strings
 workspace:
   packageSet:
-    url: https://raw.githubusercontent.com/rowtype-yoga/purescript-go-package-sets/go-0.1.18-20261126/packages.json
+    url: https://raw.githubusercontent.com/rowtype-yoga/purescript-go-package-sets/go-0.1.18-20261126.3/packages.json
   extraPackages:
     bubbletea:
       git: https://github.com/i-am-the-slime/purescript-bubbletea.git
-      ref: v0.2.0
+      ref: v0.3.0
     lipgloss:
       git: https://github.com/i-am-the-slime/purescript-lipgloss.git
-      ref: v0.1.0
+      ref: v0.2.0
